@@ -76,6 +76,11 @@ class BugHoundAgent:
             self._log("ANALYZE", f"API Error: {str(e)}. Falling back to heuristics.")
             return self._heuristic_analyze(code_snippet)
 
+        # Check if output is pure JSON array
+        if not (raw.strip().startswith('[') and raw.strip().endswith(']')):
+            self._log("ANALYZE", "LLM output contains extra text, not pure JSON. Falling back to heuristics.")
+            return self._heuristic_analyze(code_snippet)
+
         issues = self._parse_json_array_of_issues(raw)
 
         if issues is None:

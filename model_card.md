@@ -15,8 +15,15 @@ Fill this out after you run BugHound in **both** modes (Heuristic and Gemini).
 
 ## 2) How does it work?
 
-Describe the workflow in your own words (plan → analyze → act → test → reflect).  
-Include what is done by heuristics vs what is done by Gemini (if enabled).
+The workflow is: PLAN → ANALYZE → ACT → TEST → REFLECT.
+
+- PLAN: The agent logs that it's planning a quick scan and fix proposal.
+- ANALYZE: Detect issues using heuristics (checks for print, bare except, TODO) or LLM (prompts for JSON array of issues).
+- ACT: Propose fix using heuristics (replace bare except with specific exception, add logging for print) or LLM (rewrite code to address issues).
+- TEST: Assess risk based on issue severity, structural changes, and syntax validity.
+- REFLECT: Decide if safe to auto-fix based on risk level.
+
+Heuristics handle simple rules offline, while Gemini provides more intelligent analysis and fixes when enabled.
 
 ---
 
@@ -24,69 +31,52 @@ Include what is done by heuristics vs what is done by Gemini (if enabled).
 
 **Inputs:**
 
-- What kind of code snippets did you try?
-- What was the “shape” of the input (short scripts, functions, try/except blocks, etc.)?
+- Python code snippets, such as functions with print statements, try/except blocks, and TODO comments.
+- Shape: Short scripts or functions, often with common issues like bare except or debug prints.
 
 **Outputs:**
 
-- What types of issues were detected?
-- What kinds of fixes were proposed?
-- What did the risk report show?
+- Issues: Lists of detected problems with type (e.g., Code Quality, Reliability), severity (Low/Medium/High), and message.
+- Fixes: Rewritten code addressing issues, like replacing print with logging or specifying exceptions.
+- Risk report: Score (0-100), level (low/medium/high), reasons for deductions, and whether to auto-fix.
 
 ---
 
 ## 4) Reliability and safety rules
 
-List at least **two** reliability rules currently used in `assess_risk`. For each:
+1. **High severity issue deduction (-40 score):** Checks if any detected issue is marked high severity. Matters for safety as high severity issues like bare except can cause silent failures. False positive: Overly cautious if the issue isn't critical in context. False negative: If a medium severity issue is actually high risk.
 
-- What does the rule check?
-- Why might that check matter for safety or correctness?
-- What is a false positive this rule could cause?
-- What is a false negative this rule could miss?
+2. **Fixed code much shorter (-20 score):** Checks if fixed code is less than 50% of original lines. Matters to prevent accidental code removal. False positive: If shortening is intentional and correct. False negative: If lengthening code is problematic.
 
 ---
 
 ## 5) Observed failure modes
 
-Provide at least **two** examples:
+1. **Missed issue:** Heuristics might not detect nuanced issues like improper error handling beyond bare except, or logic errors not covered by simple rules.
 
-1. A time BugHound missed an issue it should have caught  
-2. A time BugHound suggested a fix that felt risky, wrong, or unnecessary  
-
-For each, include the snippet (or describe it) and what went wrong.
+2. **Risky fix:** Heuristic fix replaces print with logging but doesn't configure the logger, potentially causing runtime errors if logging isn't set up. LLM might over-edit code, changing behavior unintentionally.
 
 ---
 
 ## 6) Heuristic vs Gemini comparison
 
-Compare behavior across the two modes:
-
-- What did Gemini detect that heuristics did not?
-- What did heuristics catch consistently?
-- How did the proposed fixes differ?
-- Did the risk scorer agree with your intuition?
+- Gemini detects more varied issues beyond the hardcoded heuristics, like readability or logic problems.
+- Heuristics consistently catch known patterns like print and bare except.
+- Fixes: Gemini proposes more comprehensive changes, heuristics make minimal replacements.
+- Risk scorer aligns with intuition for obvious issues but may not catch subtle behavior changes.
 
 ---
 
 ## 7) Human-in-the-loop decision
 
-Describe one scenario where BugHound should **refuse** to auto-fix and require human review.
+Scenario: When risk level is medium, refuse auto-fix.
 
-- What trigger would you add?
-- Where would you implement it (risk_assessor vs agent workflow vs UI)?
-- What message should the tool show the user?
+- Trigger: If risk["level"] == "medium", set should_autofix = False.
+- Implement in risk_assessor.py, in the auto-fix policy section.
+- Message: "Fix is moderately risky. Human review recommended."
 
 ---
 
 ## 8) Improvement idea
 
-Propose one improvement that would make BugHound more reliable *without* making it dramatically more complex.
-
-Examples:
-
-- A better output format and parsing strategy
-- A new guardrail rule + test
-- A more careful “minimal diff” policy
-- Better detection of changes that alter behavior
-
-Write your idea clearly and briefly.
+Add syntax validation in risk assessment: Check if fixed code parses correctly with ast.parse. If not, heavily penalize score to prevent auto-fixing broken code. This catches LLM errors without complex parsing.

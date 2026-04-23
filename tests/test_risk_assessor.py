@@ -46,3 +46,16 @@ def test_missing_return_is_penalized():
     )
     assert risk["score"] < 100
     assert any("Return" in r or "return" in r for r in risk["reasons"])
+
+
+def test_syntax_error_in_fixed_code_is_high_risk():
+    original = "def f():\n    print('hi')\n"
+    fixed = "def f():\n    print('hi'\n"  # missing closing paren
+    risk = assess_risk(
+        original_code=original,
+        fixed_code=fixed,
+        issues=[{"type": "Code Quality", "severity": "Low", "msg": "print"}],
+    )
+    assert risk["level"] == "high"
+    assert risk["should_autofix"] is False
+    assert "syntax errors" in " ".join(risk["reasons"])

@@ -1,4 +1,5 @@
 from typing import Dict, List
+import ast
 
 
 def assess_risk(
@@ -30,6 +31,13 @@ def assess_risk(
     original_lines = original_code.strip().splitlines()
     fixed_lines = fixed_code.strip().splitlines()
 
+    # Check if fixed code is valid Python
+    try:
+        ast.parse(fixed_code)
+    except SyntaxError:
+        score -= 60
+        reasons.append("Fixed code has syntax errors.")
+
     # ----------------------------
     # Issue severity based risk
     # ----------------------------
@@ -52,6 +60,10 @@ def assess_risk(
     if len(fixed_lines) < len(original_lines) * 0.5:
         score -= 20
         reasons.append("Fixed code is much shorter than original.")
+
+    if len(fixed_lines) > len(original_lines) * 1.5:
+        score -= 10
+        reasons.append("Fixed code is significantly longer than original.")
 
     if "return" in original_code and "return" not in fixed_code:
         score -= 30

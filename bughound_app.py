@@ -118,8 +118,8 @@ client = None
 client_status = ""
 
 if mode == "Heuristic only (no API)":
-    client = MockClient()
-    client_status = "Using MockClient. No network calls."
+    client = None
+    client_status = "Using heuristics. No network calls."
 else:
     api_key = os.getenv("GEMINI_API_KEY", "").strip()
     if not api_key:
