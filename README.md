@@ -1,4 +1,4 @@
-# 🐶 BugHound
+# BugHound
 
 BugHound is a small, agent-style debugging tool. It analyzes a Python code snippet, proposes a fix, and runs basic reliability checks before deciding whether the fix is safe to apply automatically.
 
